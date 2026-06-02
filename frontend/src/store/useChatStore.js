@@ -7,6 +7,7 @@ export const useChatStore = create((set, get) => ({
   messages: [],
   users: [],
   selectedUser: null,
+  showRightSide: true,
   isUsersLoading: false,
   isMessagesLoading: false,
 
@@ -44,11 +45,29 @@ export const useChatStore = create((set, get) => ({
     }
   },
 
+  deleteMessage: async (messageId, type) => {
+    try {
+      const res = await axiosInstance.delete(`/messages/${messageId}`, { data: { type } });
+      const deletedMessage = res.data;
+      
+      const messages = get().messages;
+      if (type === 'me') {
+        set({ messages: messages.filter(msg => msg._id !== messageId) });
+      } else {
+        set({ messages: messages.map(msg => msg._id === messageId ? deletedMessage : msg) });
+      }
+      toast.success("Message deleted");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    }
+  },
+
   subscribeToMessages: () => {
     const { selectedUser } = get();
     if (!selectedUser) return;
 
     const socket = useAuthStore.getState().socket;
+    if (!socket) return;
 
     socket.on("newMessage", (newMessage) => {
       const isMessageSentFromSelectedUser = newMessage.senderId === selectedUser._id;
@@ -58,12 +77,26 @@ export const useChatStore = create((set, get) => ({
         messages: [...get().messages, newMessage],
       });
     });
+
+    socket.on("messageDeleted", (deletedMessage) => {
+      const isMessageForSelectedUser = 
+        deletedMessage.senderId === selectedUser._id || deletedMessage.receiverId === selectedUser._id;
+      if (!isMessageForSelectedUser) return;
+
+      set({
+        messages: get().messages.map(msg => msg._id === deletedMessage._id ? deletedMessage : msg),
+      });
+    });
   },
 
   unsubscribeFromMessages: () => {
     const socket = useAuthStore.getState().socket;
-    socket.off("newMessage");
+    if (socket) {
+      socket.off("newMessage");
+      socket.off("messageDeleted");
+    }
   },
 
-  setSelectedUser: (selectedUser) => set({ selectedUser }),
+  setSelectedUser: (selectedUser) => set({ selectedUser, showRightSide: false }),
+  setShowRightSide: (showRightSide) => set({ showRightSide }),
 }));

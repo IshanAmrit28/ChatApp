@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import assets from "../assets/assets";
 import { useAuthStore } from "../store/useAuthStore";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageCircle } from "lucide-react";
 
 const Login = () => {
   const [currentState, setCurrentState] = useState("Sign Up");
@@ -31,7 +31,10 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-cover bg-center flex items-center justify-center gap-8 sm:justify-evenly max-sm:flex-col backdrop-blur-2xl">
       {/* Left Side */}
-      <img src={assets.logo_big} alt="" className="w-[min(30vw,250px)]" />
+      <div className="flex flex-col items-center gap-4 w-[min(30vw,250px)]">
+        <MessageCircle size={100} className="text-violet-500" />
+        <h1 className="text-5xl font-bold tracking-wider text-white">Vibe</h1>
+      </div>
 
       {/* Right Side */}
       <form

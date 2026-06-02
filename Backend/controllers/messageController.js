@@ -21,11 +21,17 @@ export const getMessages = async (req, res) => {
     const { id: userToChatId } = req.params;
     const myId = req.user._id;
 
+    const me = await User.findById(myId);
+    if (!me.friends.includes(userToChatId)) {
+      return res.status(403).json({ message: "You can only view messages with friends" });
+    }
+
     const messages = await Message.find({
       $or: [
         { senderId: myId, receiverId: userToChatId },
         { senderId: userToChatId, receiverId: myId },
       ],
+      deletedBy: { $ne: myId },
     }).sort({ createdAt: 1 });
 
     res.status(200).json(messages);
@@ -40,6 +46,11 @@ export const sendMessage = async (req, res) => {
     const { text, image } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
+
+    const me = await User.findById(senderId);
+    if (!me.friends.includes(receiverId)) {
+      return res.status(403).json({ message: "You can only send messages to friends" });
+    }
 
     let imageUrl;
     if (image) {
@@ -66,6 +77,48 @@ export const sendMessage = async (req, res) => {
     res.status(201).json(newMessage);
   } catch (error) {
     console.log("Error in sendMessage controller: ", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const deleteMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type } = req.body; // 'me' or 'everyone'
+    const userId = req.user._id;
+
+    const message = await Message.findById(id);
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (type === "everyone") {
+      if (message.senderId.toString() !== userId.toString()) {
+        return res.status(403).json({ message: "You can only delete your own messages for everyone" });
+      }
+      
+      message.isDeleted = true;
+      message.text = "This message was deleted";
+      message.image = null;
+      await message.save();
+
+      const receiverSocketId = getReceiverSocketId(message.receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("messageDeleted", message);
+      }
+
+      return res.status(200).json(message);
+    } else if (type === "me") {
+      if (!message.deletedBy.includes(userId)) {
+        message.deletedBy.push(userId);
+        await message.save();
+      }
+      return res.status(200).json(message);
+    } else {
+      return res.status(400).json({ message: "Invalid delete type" });
+    }
+  } catch (error) {
+    console.log("Error in deleteMessage controller: ", error.message);
     res.status(500).json({ message: "Internal server error" });
   }
 };

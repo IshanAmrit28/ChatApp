@@ -3,10 +3,10 @@ import assets from "../assets/assets";
 import { formatMessageTime } from "../lib/utils";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, X } from "lucide-react";
+import { Image, X, Trash2, MessageCircle } from "lucide-react";
 
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, sendMessage, subscribeToMessages, unsubscribeFromMessages, selectedUser, setSelectedUser } = useChatStore();
+  const { messages, getMessages, isMessagesLoading, sendMessage, subscribeToMessages, unsubscribeFromMessages, selectedUser, setSelectedUser, deleteMessage, showRightSide, setShowRightSide } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   
   const [text, setText] = useState("");
@@ -15,10 +15,11 @@ const ChatContainer = () => {
   const scrollEnd = useRef();
 
   useEffect(() => {
+    if (!selectedUser) return;
     getMessages(selectedUser._id);
     subscribeToMessages();
     return () => unsubscribeFromMessages();
-  }, [selectedUser._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
+  }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
     if (scrollEnd.current) {
@@ -65,27 +66,25 @@ const ChatContainer = () => {
   const isOnline = onlineUsers.includes(selectedUser?._id);
 
   return selectedUser ? (
-    <div className="h-full flex flex-col relative backdrop-blur-lg">
+    <div className="h-full flex flex-col relative backdrop-blur-lg overflow-hidden">
       {/* -----------header---------------------- */}
       <div className="flex items-center gap-3 py-3 mx-4 border-b border-stone-500">
-        <img src={selectedUser.profilePic || assets.avatar_icon} alt="" className="w-8 h-8 rounded-full object-cover" />
-
-        <p className="flex-1 text-lg text-white flex items-center gap-2">
-          {selectedUser.fullName}
-          <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-500"}`}></span>
-        </p>
+        <div 
+          className="flex items-center gap-3 cursor-pointer" 
+          onClick={() => setShowRightSide(true)}
+        >
+          <img src={selectedUser.profilePic || assets.avatar_icon} alt="" className="w-8 h-8 rounded-full object-cover" />
+          <p className="text-lg text-white flex items-center gap-2">
+            {selectedUser.fullName}
+            <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-500" : "bg-gray-500"}`}></span>
+          </p>
+        </div>
 
         <img
           onClick={() => setSelectedUser(null)}
           src={assets.arrow_icon}
           alt="back"
-          className="md:hidden max-w-7 cursor-pointer rotate-180"
-        />
-
-        <img
-          src={assets.help_icon}
-          alt="help"
-          className="max-md:hidden max-w-5"
+          className="md:hidden max-w-7 cursor-pointer rotate-180 ml-auto"
         />
       </div>
       
@@ -98,9 +97,9 @@ const ChatContainer = () => {
           return (
             <div
               key={msg._id || index}
-              className={`flex items-end gap-2 ${fromMe ? "flex-row-reverse" : "flex-row"}`}
+              className={`flex items-end gap-2 ${fromMe ? "flex-row-reverse" : "flex-row"} group relative`}
             >
-              <div className="text-center text-xs flex flex-col items-center gap-1">
+              <div className="text-center text-xs flex flex-col items-center gap-1 shrink-0">
                 <img
                   src={profilePic || assets.avatar_icon}
                   alt="avatar"
@@ -108,24 +107,50 @@ const ChatContainer = () => {
                 />
               </div>
 
-              <div className={`flex flex-col max-w-[70%] ${fromMe ? "items-end" : "items-start"}`}>
-                {msg.image && (
-                  <img
-                    src={msg.image}
-                    alt="Attachment"
-                    className="sm:max-w-[200px] rounded-md mb-2 object-cover border border-gray-600"
-                  />
+              <div className={`flex flex-col max-w-[70%] relative ${fromMe ? "items-end" : "items-start"}`}>
+                
+                {/* Trash menu for deleting */}
+                {!msg.isDeleted && (
+                  <div className={`absolute top-1/2 -translate-y-1/2 ${fromMe ? "right-[100%] mr-2" : "left-[100%] ml-2"} hidden group-hover:flex items-center`}>
+                    <div className="relative group/menu">
+                      <Trash2 size={16} className="text-gray-400 hover:text-white cursor-pointer" />
+                      <div className={`absolute bottom-full pb-2 ${fromMe ? "right-0" : "left-0"} hidden group-hover/menu:block z-50`}>
+                        <div className="flex flex-col bg-[#282142] p-2 rounded-lg shadow-lg shadow-black/50 text-xs w-36 border border-gray-600">
+                          <button onClick={() => deleteMessage(msg._id, 'me')} className="text-left p-2 hover:bg-gray-700 rounded transition-colors w-full text-white">Delete for me</button>
+                          {fromMe && (
+                            <button onClick={() => deleteMessage(msg._id, 'everyone')} className="text-left p-2 hover:bg-gray-700 rounded transition-colors w-full text-red-400">Delete for everyone</button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                {msg.text && (
-                  <p
-                    className={`p-3 rounded-xl text-white ${
-                      fromMe
-                        ? "bg-violet-600 rounded-br-sm"
-                        : "bg-gray-700 rounded-bl-sm"
-                    }`}
-                  >
-                    {msg.text}
+
+                {msg.isDeleted ? (
+                  <p className="p-3 rounded-xl text-gray-400 italic bg-gray-800/80 border border-gray-700">
+                    This message was deleted
                   </p>
+                ) : (
+                  <>
+                    {msg.image && (
+                      <img
+                        src={msg.image}
+                        alt="Attachment"
+                        className="sm:max-w-[200px] rounded-md mb-2 object-cover border border-gray-600"
+                      />
+                    )}
+                    {msg.text && (
+                      <p
+                        className={`p-3 rounded-xl text-white ${
+                          fromMe
+                            ? "bg-violet-600 rounded-br-sm"
+                            : "bg-gray-700 rounded-bl-sm"
+                        }`}
+                      >
+                        {msg.text}
+                      </p>
+                    )}
+                  </>
                 )}
                 <p className="text-xs text-gray-400 mt-1">
                   {formatMessageTime(msg.createdAt)}
@@ -190,7 +215,7 @@ const ChatContainer = () => {
     </div>
   ) : (
     <div className="flex flex-col items-center justify-center h-full gap-2 text-grey-500 bg-white/10 max-md:hidden rounded-lg">
-      <img src={assets.logo_icon} alt="logo" className="w-24 opacity-80" />
+      <MessageCircle size={64} className="text-violet-500 mb-2 opacity-80" />
       <p className="text-xl font-medium text-white">
         Every day deserves a cup of tea
       </p>

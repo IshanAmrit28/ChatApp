@@ -23,7 +23,7 @@ const App = () => {
   }
 
   return (
-    <div className="bg-[url('./src/assets/bgImage.svg')] bg-contain min-h-screen">
+    <div className="bg-[url('./src/assets/bgImage.svg')] bg-cover bg-center bg-no-repeat bg-fixed min-h-screen">
       <Routes>
         <Route path="/" element={authUser ? <Home /> : <Navigate to="/login" />} />
         <Route path="/login" element={!authUser ? <Login /> : <Navigate to="/" />} />

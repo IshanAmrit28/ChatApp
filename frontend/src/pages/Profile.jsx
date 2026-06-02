@@ -2,10 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import assets from "../assets/assets";
 import { useAuthStore } from "../store/useAuthStore";
+import { MessageCircle } from "lucide-react";
 
 const Profile = () => {
   const { authUser, updateProfile } = useAuthStore();
   const [selectedImage, setSelectedImage] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null);
   const [name, setName] = useState(authUser?.fullName || ""); 
   const [bio, setBio] = useState(authUser?.bio || "");
   const navigate = useNavigate();
@@ -18,16 +20,19 @@ const Profile = () => {
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const base64Image = reader.result;
-      await updateProfile({ profilePic: base64Image });
+    reader.onload = () => {
+      setImageBase64(reader.result);
     };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await updateProfile({ fullName: name, bio });
-    navigate("/");
+    const updateData = { fullName: name, bio };
+    if (imageBase64) {
+      updateData.profilePic = imageBase64;
+    }
+    await updateProfile(updateData);
+    setImageBase64(null); // Reset after successful update
   };
 
   return (
@@ -83,20 +88,28 @@ const Profile = () => {
             className="p-2 border border-gray-500 rounded-md focus:ring-2 focus:ring-violet-500 opacity-70 text-black bg-white"
           ></textarea>
 
-          <button
-            type="submit"
-            className="bg-linear-to-r from-purple-400 to-violet-600 text-white p-2 rounded-full text-lg cursor-pointer"
-          >
-            Back to Chat
-          </button>
+          <div className="flex gap-4 mt-2">
+            <button
+              type="submit"
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white p-2 rounded-xl text-lg cursor-pointer transition-colors shadow-lg"
+            >
+              Save Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/")}
+              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white p-2 rounded-xl text-lg cursor-pointer transition-colors shadow-lg"
+            >
+              Back to Chat
+            </button>
+          </div>
         </form>
 
         {/* Right Side Logo */}
-        <img
-          src={assets.logo_icon}
-          alt="logo"
-          className="max-w-36 aspect-square rounded-full mx-10 max-sm:mt-10"
-        />
+        <div className="flex flex-col items-center gap-4 mx-10 max-sm:mt-10">
+          <MessageCircle size={80} className="text-violet-500" />
+          <h1 className="text-4xl font-bold tracking-wider text-white">Vibe</h1>
+        </div>
       </div>
     </div>
   );
