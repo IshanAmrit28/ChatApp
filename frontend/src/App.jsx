@@ -6,6 +6,7 @@ import Profile from "./pages/Profile";
 import { useAuthStore } from "./store/useAuthStore";
 import { Toaster } from "react-hot-toast";
 import { Loader } from "lucide-react";
+import assets from "./assets/assets";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
@@ -23,7 +24,7 @@ const App = () => {
   }
 
   return (
-    <div className="bg-[url('./src/assets/bgImage.svg')] bg-cover bg-center bg-no-repeat bg-fixed min-h-screen">
+    <div style={{ backgroundImage: `url(${assets.bgImage})` }} className="bg-cover bg-center bg-no-repeat bg-fixed min-h-screen">
       <Routes>
         <Route path="/" element={authUser ? <Home /> : <Navigate to="/login" />} />
         <Route path="/login" element={!authUser ? <Login /> : <Navigate to="/" />} />
