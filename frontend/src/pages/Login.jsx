@@ -1,10 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import assets from "../assets/assets";
 import { useAuthStore } from "../store/useAuthStore";
 import { Loader2, MessageCircle } from "lucide-react";
 
 const Login = () => {
-  const [currentState, setCurrentState] = useState("Sign Up");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isSignupRoute = location.pathname === "/signup";
+  const currentState = isSignupRoute ? "Sign Up" : "Login";
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,6 +17,10 @@ const Login = () => {
 
   const { login, signup, isCheckingAuth } = useAuthStore();
   const isLoading = isCheckingAuth; // We could add isLoggingIn or isSigningUp to auth store for better UX
+
+  useEffect(() => {
+    setIsDataSubmitted(false);
+  }, [location.pathname]);
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -114,10 +122,7 @@ const Login = () => {
             <p className="text-sm text-grey-600">
               Already having an account?{" "}
               <span
-                onClick={() => {
-                  setCurrentState("Login");
-                  setIsDataSubmitted(false);
-                }}
+                onClick={() => navigate("/login")}
                 className="font-medium text-violet-500 cursor-pointer"
               >
                 Login
@@ -127,9 +132,7 @@ const Login = () => {
             <p className="text-sm text-grey-600">
               Dont have an account?{" "}
               <span
-                onClick={() => {
-                  setCurrentState("Sign Up");
-                }}
+                onClick={() => navigate("/signup")}
                 className="font-medium text-violet-500 cursor-pointer"
               >
                 Sign Up
