@@ -3,16 +3,49 @@ import assets from "../assets/assets";
 import { formatMessageTime } from "../lib/utils";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
-import { Image, X, Trash2, MessageCircle } from "lucide-react";
+import { Image, X, Trash2, MessageCircle, MoreVertical } from "lucide-react";
+import toast from "react-hot-toast";
 
 const ChatContainer = () => {
-  const { messages, getMessages, isMessagesLoading, sendMessage, subscribeToMessages, unsubscribeFromMessages, selectedUser, setSelectedUser, deleteMessage, showRightSide, setShowRightSide } = useChatStore();
+  const { messages, getMessages, isMessagesLoading, sendMessage, subscribeToMessages, unsubscribeFromMessages, selectedUser, setSelectedUser, deleteMessage, showRightSide, setShowRightSide, clearChatImmediately } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
   
   const scrollEnd = useRef();
+
+  const handleDeleteChat = () => {
+    const backupMessages = [...messages];
+    useChatStore.setState({ messages: [] });
+    let isUndone = false;
+    
+    toast((t) => (
+      <div className="flex items-center gap-4">
+        <span className="text-sm font-medium">Chat deleted</span>
+        <button
+          className="px-3 py-1 bg-violet-600 text-white rounded-md text-sm hover:bg-violet-700 transition-colors"
+          onClick={() => {
+            isUndone = true;
+            useChatStore.setState({ messages: backupMessages });
+            toast.dismiss(t.id);
+          }}
+        >
+          Undo
+        </button>
+      </div>
+    ), { duration: 5000, id: "delete-chat-toast" });
+    
+    setTimeout(async () => {
+      if (!isUndone) {
+        try {
+          await clearChatImmediately(selectedUser._id);
+        } catch (error) {
+          useChatStore.setState({ messages: backupMessages });
+        }
+      }
+    }, 5000);
+  };
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -80,12 +113,33 @@ const ChatContainer = () => {
           </p>
         </div>
 
-        <img
-          onClick={() => setSelectedUser(null)}
-          src={assets.arrow_icon}
-          alt="back"
-          className="md:hidden max-w-7 cursor-pointer rotate-180 ml-auto"
-        />
+        <div className="ml-auto flex items-center gap-4">
+          <div className="relative group/headermenu cursor-pointer p-1">
+            <MoreVertical 
+              size={20} 
+              className="text-gray-400 hover:text-white transition-colors" 
+            />
+            <div className="absolute right-0 top-full pt-2 hidden group-hover/headermenu:block z-50">
+              <div className="flex flex-col bg-[#282142] p-2 rounded-lg shadow-lg shadow-black/50 text-sm w-36 border border-gray-600">
+                <button onClick={handleDeleteChat} className="text-left p-2 hover:bg-gray-700 rounded transition-colors w-full text-red-400 flex items-center gap-2">
+                  <Trash2 size={16} />
+                  Clear chat
+                </button>
+                <button onClick={() => setSelectedUser(null)} className="text-left p-2 hover:bg-gray-700 rounded transition-colors w-full text-white flex items-center gap-2">
+                  <X size={16} />
+                  Close chat
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <img
+            onClick={() => setSelectedUser(null)}
+            src={assets.arrow_icon}
+            alt="back"
+            className="md:hidden w-7 h-7 cursor-pointer rotate-180"
+          />
+        </div>
       </div>
       
       {/* -----------chat messages---------------------- */}
