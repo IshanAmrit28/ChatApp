@@ -7,6 +7,7 @@ import { useAuthStore } from "./store/useAuthStore";
 import { Toaster } from "react-hot-toast";
 import { Loader } from "lucide-react";
 import assets from "./assets/assets";
+import { Analytics } from "@vercel/analytics/react";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth } = useAuthStore();
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/profile" element={authUser ? <Profile /> : <Navigate to="/login" />} />
       </Routes>
       <Toaster />
+      <Analytics />
     </div>
   );
 };
